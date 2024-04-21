@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Service\SynologyChat;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\InvalidOptionException;
@@ -16,7 +17,7 @@ use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * bin/console app:price-alert:item --url="https://www.boulanger.com/ref/1195870" --selector="section.product__summary p.price__amount" --price=900
+ * symfony console app:price-alert:item --url="https://www.boulanger.com/ref/1195870" --selector="section.product__summary p.price__amount" --price=900
  */
 #[AsCommand(
     name: 'app:price-alert:item',
@@ -26,6 +27,7 @@ class PriceAlertItemCommand extends Command
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        private readonly SynologyChat $synologyChat
     )
     {
         parent::__construct();
@@ -71,16 +73,24 @@ class PriceAlertItemCommand extends Command
             subject: trim($crawler->getNode(0)->nodeValue)
         );
 
-        $io->info('Actual product price is : ' . $priceValue . '€');
+        $actualPriceMessage = 'Actual product price is : ' . $priceValue . '€';
+        $io->info($actualPriceMessage);
 
         $price = intval($priceValue);
         $priceAlert = intval($priceAlert);
 
         if ($price <= $priceAlert) {
-            dd('notif');
+            $triggerMessage = [
+                ':rotating_light: Price alert triggered !',
+                $actualPriceMessage,
+                '<' . $url . '|'. $url . '>'
+            ];
+            $this->synologyChat->sendMessage($triggerMessage);
+            $io->success('Price alert triggered !');
         }
-
-        $io->success('Price alert not triggered');
+        else {
+            $io->success('Price alert not triggered');
+        }
 
         return Command::SUCCESS;
     }
