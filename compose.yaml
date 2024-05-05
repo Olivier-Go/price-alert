@@ -1,0 +1,30 @@
+services:
+  php-fpm:
+    build:
+      context: .
+      dockerfile: php-fpm.dockerfile
+    volumes:
+      - .:/var/www
+      - ./public:/var/www/public
+    expose:
+      - 9000
+    networks:
+      - price-alert
+  apache:
+    build:
+      context: .
+      dockerfile: apache.dockerfile
+    ports:
+      # host:container
+      - 11080:80
+    volumes:
+      - .:/var/www
+      - ./public:/var/www/public
+    depends_on:
+      - php-fpm
+    networks:
+      - price-alert
+
+networks:
+  price-alert:
+    driver: bridge
